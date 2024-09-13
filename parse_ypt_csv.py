@@ -84,6 +84,19 @@ class ypt_report:
             # print(f'{name:20}{ypt_expiration}  {email}')
     
     # Amanda C <scoutmamabear613@gmail.com>, Nicole Sousa <activia@hotmail.com>, "lisa.ericson@gmail.com" <lisa.ericson@gmail.com>, Laura Wang <heidtlau@gmail.com>, "bpgalante@gmail.com" <bpgalante@gmail.com>
+    def get_leader_email_lists(self) -> dict:
+        leader_emails = {}
+        leader_emails['trained'] = []
+        leader_emails['needYPT'] = []
+
+        for leader in self.trained_leaders:
+            leader_emails['trained'].append(leader.as_email_recipient())
+        
+        for leader in self.leaders_who_need_ypt:
+            leader_emails['needYPT'].append(leader.as_email_recipient())
+
+        return leader_emails
+    
     def __str__(self) -> str:
         string_rep = "Trained leaders:\n"
         for leader in self.trained_leaders:
@@ -99,11 +112,16 @@ class ypt_report:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename", required=True, help="Path to a CSV report downloaded from the BSA YPT report tool")
+    parser.add_argument("-e", "--email", type=bool, help="Email leaders who need to complete YPT")
     args = parser.parse_args()
 
     report = ypt_report(pathlib.Path(args.filename))
 
     print(f'\n{report}')
+
+    print('Emails of leaders who need YPT:\n')
+    print(report.get_leader_email_lists()['needYPT'])
+    
 
     pass
 
