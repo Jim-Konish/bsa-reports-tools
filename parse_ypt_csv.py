@@ -14,6 +14,10 @@ class Leader:
     def __str__(self) -> str:
         string_rep = f'{self.name} {self.email} {self.expiration}'
         return string_rep
+    
+    def as_email_recipient(self) -> str:
+        string_rep = f'{self.name} <{self.email}>'
+        return string_rep
 
 class ypt_report:
     def __init__(self, csv_file:pathlib.Path):
@@ -69,7 +73,7 @@ class ypt_report:
                 ypt_exp_date = datetime.date(exp_year, exp_month, exp_day)
 
             except:
-                print(f'{exp_year}, {exp_month}, {exp_day}')
+                print(f'*Error* {exp_year}, {exp_month}, {exp_day}')
             leader = Leader(name, email, ypt_exp_date)
             
             if(ypt_exp_date < ypt_cutoff):
@@ -77,8 +81,9 @@ class ypt_report:
             else:
                 self.trained_leaders.append(leader)
             
-            print(f'{name:20}{ypt_expiration}  {email}')
+            # print(f'{name:20}{ypt_expiration}  {email}')
     
+    # Amanda C <scoutmamabear613@gmail.com>, Nicole Sousa <activia@hotmail.com>, "lisa.ericson@gmail.com" <lisa.ericson@gmail.com>, Laura Wang <heidtlau@gmail.com>, "bpgalante@gmail.com" <bpgalante@gmail.com>
     def __str__(self) -> str:
         string_rep = "Trained leaders:\n"
         for leader in self.trained_leaders:
@@ -98,7 +103,7 @@ def main():
 
     report = ypt_report(pathlib.Path(args.filename))
 
-    print(report)
+    print(f'\n{report}')
 
     pass
 
