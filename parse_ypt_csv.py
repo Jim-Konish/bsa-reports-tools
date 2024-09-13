@@ -1,0 +1,106 @@
+import argparse
+import csv
+import pathlib
+import rich
+import datetime
+import regex as re
+
+class Leader:
+    def __init__(self, name, email, expiration):
+        self.name = name
+        self.email = email
+        self.expiration = expiration
+
+    def __str__(self) -> str:
+        string_rep = f'{self.name} {self.email} {self.expiration}'
+        return string_rep
+
+class ypt_report:
+    def __init__(self, csv_file:pathlib.Path):
+        # assert (csv_file.is_file() == True), "invalid path to CSV"
+        f = csv_file.open("r")
+        lines = f.readlines()
+        
+        self.parse_and_trim_header(lines)
+
+        # reader = csv.DictReader(self.lines)
+        # for row in reader:
+        #     print(row)
+
+    def parse_and_trim_header(self, lines):
+        # We need to grab the organization name and the date the report was generated.
+        re_org_name = re.compile("Organization Name: (.*)$")
+        trim_before_index = 0
+        for (i, line) in enumerate(lines):
+            match_org = re_org_name.search(line)
+            if match_org:
+                self.org_name = match_org.group(1)
+                trim_before_index = i + 1
+                break
+        
+        lines = lines[trim_before_index:]                
+
+        re_date_generated = re.compile("Date Report Generated: (.*)$")
+        for (i, line) in enumerate(lines):
+            match = re_date_generated.search(line)
+            if match:
+                self.date_generated = match.group(1)
+                trim_before_index = i + 3 # There are two extra lines that we don't need after the date line
+                break
+        
+        lines = lines[trim_before_index:]
+
+        print(self.org_name)
+        print(f'Generated on {self.date_generated}')
+
+        self.trained_leaders = []
+        self.leaders_who_need_ypt = []
+
+        reader = csv.DictReader(lines)
+        ypt_cutoff = datetime.date(2026, 1, 1)
+        for row in reader:
+            ypt_expiration = row["Y01_Expires"]
+            name = row["First_Name"] + ' ' + row["Last_Name"]
+            email = row["Email_Address"]
+            exp_month = int(ypt_expiration[0:2])
+            exp_day = int(ypt_expiration[3:5])
+            exp_year = int(ypt_expiration[6:10])
+            try:
+                ypt_exp_date = datetime.date(exp_year, exp_month, exp_day)
+
+            except:
+                print(f'{exp_year}, {exp_month}, {exp_day}')
+            leader = Leader(name, email, ypt_exp_date)
+            
+            if(ypt_exp_date < ypt_cutoff):
+                self.leaders_who_need_ypt.append(leader)
+            else:
+                self.trained_leaders.append(leader)
+            
+            print(f'{name:20}{ypt_expiration}  {email}')
+    
+    def __str__(self) -> str:
+        string_rep = "Trained leaders:\n"
+        for leader in self.trained_leaders:
+            string_rep += f'{leader}\n'
+
+        
+        string_rep += "\nLeaders who need YPT:\n"
+        for leader in self.leaders_who_need_ypt:
+            string_rep += f'{leader}\n'
+
+        return string_rep
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--filename", required=True, help="Path to a CSV report downloaded from the BSA YPT report tool")
+    args = parser.parse_args()
+
+    report = ypt_report(pathlib.Path(args.filename))
+
+    print(report)
+
+    pass
+
+if(__name__ == "__main__"):
+    main()
