@@ -107,12 +107,16 @@ class ypt_report:
         for leader in self.leaders_who_need_ypt:
             string_rep += f'{leader}\n'
 
+        trained_count = len(self.trained_leaders)
+        untrained_count = len(self.leaders_who_need_ypt)
+        string_rep += f'\n{trained_count}/{trained_count + untrained_count} leaders trained\n'
         return string_rep
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename", required=True, help="Path to a CSV report downloaded from the BSA YPT report tool")
-    parser.add_argument("-e", "--email", type=bool, help="Email leaders who need to complete YPT")
+    parser.add_argument("-e", "--email", type=bool, default=False, help="Email leaders who need to complete YPT")
+
     args = parser.parse_args()
 
     report = ypt_report(pathlib.Path(args.filename))
@@ -120,7 +124,9 @@ def main():
     print(f'\n{report}')
 
     print('Emails of leaders who need YPT:\n')
-    print(report.get_leader_email_lists()['needYPT'])
+
+    need_YPT_emails = report.get_leader_email_lists()['needYPT']
+    print(need_YPT_emails)
     
 
     pass
