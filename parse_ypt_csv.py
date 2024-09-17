@@ -5,6 +5,9 @@ import rich
 import datetime
 import regex as re
 
+from email_handling.send_email import send_email
+from login.get_login import get_email_login
+
 class Leader:
     def __init__(self, name, email, expiration):
         self.name = name
@@ -109,13 +112,35 @@ class ypt_report:
 
         trained_count = len(self.trained_leaders)
         untrained_count = len(self.leaders_who_need_ypt)
-        string_rep += f'\n{trained_count}/{trained_count + untrained_count} leaders trained\n'
+        total_count = trained_count + untrained_count
+        percent_trained = (trained_count / total_count) * 100
+        string_rep += f'\n{trained_count}/{total_count} leaders trained ({percent_trained:.0f}%)\n'
         return string_rep
+    
+    def send_ypt_reminder_emails(self):
+        (sender, password) = get_email_login()
+        leader:Leader
+        for leader in self.leaders_who_need_ypt:
+            email_body =  f'Hello {leader.name},\n'
+            email_body += f'This is an automated reminder that your YPT certification expires on {leader.expiration} and needs to be retaken before Nov 1, 2024.'
+            email_body += f'\nPlease log in to scouting.org and find the YPT course in the training center.\n\n'
+            email_body += f'Thank you,\n'
+            email_body += f'Jim Konish\n'
+            email_body += f'Pack 613 Trainer'
+
+            send_email(subject=f'[Pack 613 Training] YPT Recertification Reminder',
+                       body = email_body,
+                       sender = sender,
+                       recipients = [leader.as_email_recipient()],
+                       password = password)
+            
+            print(f'Reminder email sent to {leader.as_email_recipient()}\n')
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename", required=True, help="Path to a CSV report downloaded from the BSA YPT report tool")
-    parser.add_argument("-e", "--email", type=bool, default=False, help="Email leaders who need to complete YPT")
+    parser.add_argument("-e", "--email", action='store_true', help="Email leaders who need to complete YPT")
 
     args = parser.parse_args()
 
@@ -127,6 +152,11 @@ def main():
 
     need_YPT_emails = report.get_leader_email_lists()['needYPT']
     print(need_YPT_emails)
+
+    if(args.email):
+        print(f'Sending reminder emails to {len(need_YPT_emails)} leaders...\n')
+        report.send_ypt_reminder_emails()
+
     
 
     pass

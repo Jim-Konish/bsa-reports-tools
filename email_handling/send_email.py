@@ -1,3 +1,5 @@
+# This code came straight from a tutorial on sending emails from Python through Gmail.
+
 import smtplib
 from email.mime.text import MIMEText
 
