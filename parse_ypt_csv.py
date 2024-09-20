@@ -1,3 +1,6 @@
+# Author: Jim Konish
+# License: MIT
+
 import argparse
 import csv
 import pathlib
@@ -97,9 +100,6 @@ class ypt_report:
             else:
                 self.trained_leaders.append(leader)
             
-            # print(f'{name:20}{ypt_expiration}  {email}')
-    
-    # Amanda C <scoutmamabear613@gmail.com>, Nicole Sousa <activia@hotmail.com>, "lisa.ericson@gmail.com" <lisa.ericson@gmail.com>, Laura Wang <heidtlau@gmail.com>, "bpgalante@gmail.com" <bpgalante@gmail.com>
     def get_leader_email_lists(self) -> dict:
         leader_emails = {}
         leader_emails['trained'] = []
