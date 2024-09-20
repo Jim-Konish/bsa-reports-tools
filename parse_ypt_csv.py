@@ -5,6 +5,10 @@ import rich
 import datetime
 import regex as re
 
+import yaml
+import pathlib
+
+
 from email_handling.send_email import send_email
 from login.get_login import get_email_login
 
@@ -23,10 +27,13 @@ class Leader:
         return string_rep
 
 class ypt_report:
-    def __init__(self, csv_file:pathlib.Path):
+    def __init__(self, csv_file:pathlib.Path, excluded_leaders = [], signature="YIS,\nI forgot to fill out the signature in my config.yml file ;)"):
         # assert (csv_file.is_file() == True), "invalid path to CSV"
         f = csv_file.open("r")
         lines = f.readlines()
+
+        self.excluded_leaders = excluded_leaders
+        self.signature = signature
         
         self.parse_and_trim_header(lines)
 
@@ -36,12 +43,14 @@ class ypt_report:
 
     def parse_and_trim_header(self, lines):
         # We need to grab the organization name and the date the report was generated.
-        re_org_name = re.compile("Organization Name: (.*)$")
+        re_org_name = re.compile("Organization Name: ((.*) (\d+), .*)$")
         trim_before_index = 0
         for (i, line) in enumerate(lines):
             match_org = re_org_name.search(line)
             if match_org:
-                self.org_name = match_org.group(1)
+                self.org_name = match_org.group(1)  # This is the combined organization name including the chartered organization.
+                self.unit_type = match_org.group(2) # Pack, troop, crew, etc
+                self.unit_number = int(match_org.group(3)) # Unit number converted to an integer to avoid inserting leading zeroes later
                 trim_before_index = i + 1
                 break
         
@@ -68,6 +77,10 @@ class ypt_report:
         for row in reader:
             ypt_expiration = row["Y01_Expires"]
             name = row["First_Name"] + ' ' + row["Last_Name"]
+
+            if(name in self.excluded_leaders):
+                print(f'Excluding {name} from report')
+                continue
             email = row["Email_Address"]
             exp_month = int(ypt_expiration[0:2])
             exp_day = int(ypt_expiration[3:5])
@@ -117,34 +130,49 @@ class ypt_report:
         string_rep += f'\n{trained_count}/{total_count} leaders trained ({percent_trained:.0f}%)\n'
         return string_rep
     
-    def send_ypt_reminder_emails(self):
+    def send_ypt_reminder_emails(self, test_only=False):
         (sender, password) = get_email_login()
+
+        subject = f'[{self.unit_type} {self.unit_number} Training] YPT Recertification Reminder'
+
         leader:Leader
         for leader in self.leaders_who_need_ypt:
             email_body =  f'Hello {leader.name},\n'
             email_body += f'This is an automated reminder that your YPT certification expires on {leader.expiration} and needs to be retaken before Nov 1, 2024.'
-            email_body += f'\nPlease log in to scouting.org and find the YPT course in the training center.\n\n'
-            email_body += f'Thank you,\n'
-            email_body += f'Jim Konish\n'
-            email_body += f'Pack 613 Trainer'
+            email_body += f'\nPlease log in to my.scouting.org and find the YPT course in the training center.\n'
+            email_body += f'Thank you!\n\n'
+            email_body += self.signature
 
-            send_email(subject=f'[Pack 613 Training] YPT Recertification Reminder',
-                       body = email_body,
-                       sender = sender,
-                       recipients = [leader.as_email_recipient()],
-                       password = password)
+            if(test_only):
+                print("\n** TEST - EMAIL NOT SENT **")
+                print(f'subject:{subject}')
+                print(f'from:{sender}')
+                print(f'to:{leader.as_email_recipient()}')
+                print(f'body:\n{email_body}')
+
+            else:
+                send_email(subject=subject,
+                            body = email_body,
+                            sender = sender,
+                            recipients = [leader.as_email_recipient()],
+                            password = password)
             
-            print(f'Reminder email sent to {leader.as_email_recipient()}\n')
-
+                print(f'Reminder email sent to {leader.as_email_recipient()}\n')    
+    
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filename", required=True, help="Path to a CSV report downloaded from the BSA YPT report tool")
     parser.add_argument("-e", "--email", action='store_true', help="Email leaders who need to complete YPT")
+    parser.add_argument("-t", "--test", action='store_true', help="Print out details without actually sending any emails, if combined with the -e/--email flag")
 
     args = parser.parse_args()
 
-    report = ypt_report(pathlib.Path(args.filename))
+    config = None
+    with open(pathlib.Path('config.yml'), "r") as f:
+        config = yaml.safe_load(f)
+
+    report = ypt_report(pathlib.Path(args.filename), excluded_leaders=config['excluded-leaders'], signature=config['sender-signature'])
 
     print(f'\n{report}')
 
@@ -155,7 +183,7 @@ def main():
 
     if(args.email):
         print(f'Sending reminder emails to {len(need_YPT_emails)} leaders...\n')
-        report.send_ypt_reminder_emails()
+        report.send_ypt_reminder_emails(test_only = args.test)
 
     
 
